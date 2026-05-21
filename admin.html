@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Triven Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="mobile-overlay" class="mobile-overlay"></div>
+    <div id="login-modal" class="modal hidden">
+        <div class="modal-content login-box">
+            <h2>Admin Login</h2>
+            <form id="admin-login-form">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="login-email" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit" class="btn primary-btn">Login</button>
+                <div id="login-error" class="error-msg"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Order Details Modal -->
+    <div id="order-modal" class="modal hidden">
+        <div class="modal-content login-box modal-lg" style="max-width: 800px;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+                <h2 style="margin: 0; font-size: 1.5rem;">Order Details <span id="modal-order-number" class="text-primary" style="font-size: 1.2rem; margin-left: 8px;"></span></h2>
+                <button id="close-order-modal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Cancellation Banner -->
+                <div id="modal-cancellation-reason-container" style="display: none; background: #fef2f2; border: 1px solid #fecaca; padding: 16px; border-radius: var(--radius-md); margin-bottom: 24px;">
+                    <h3 style="color: #991b1b; font-size: 0.95rem; margin-top: 0; margin-bottom: 6px;"><i class="fas fa-exclamation-triangle"></i> Order Cancelled</h3>
+                    <p style="margin: 0; color: #7f1d1d; font-size: 0.9rem;"><strong>Reason:</strong> <span id="modal-cancellation-reason"></span></p>
+                </div>
+                
+                <div class="detail-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;">
+                    <!-- Customer Info -->
+                    <div class="info-card" style="background: var(--background); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border);">
+                        <h3 style="font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.05em;"><i class="fas fa-user"></i> Customer Details</h3>
+                        <p style="margin-bottom: 6px;"><strong>Name:</strong> <span id="modal-customer-name"></span></p>
+                        <p style="margin-bottom: 6px;"><strong>Email:</strong> <span id="modal-customer-email"></span></p>
+                        <p style="margin-bottom: 0;"><strong>Phone:</strong> <span id="modal-customer-phone"></span></p>
+                    </div>
+
+                    <!-- Shipping Info -->
+                    <div class="info-card" style="background: var(--background); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border);">
+                        <h3 style="font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.05em;"><i class="fas fa-shipping-fast"></i> Shipping Address</h3>
+                        <p style="margin-bottom: 6px;" id="modal-shipping-name-phone"><strong></strong></p>
+                        <p style="margin-bottom: 4px; color: var(--text-muted); font-size: 0.95rem;" id="modal-shipping-line1"></p>
+                        <p style="margin-bottom: 4px; color: var(--text-muted); font-size: 0.95rem;" id="modal-shipping-line2"></p>
+                        <p style="margin-bottom: 0; color: var(--text-muted); font-size: 0.95rem;" id="modal-shipping-city-state"></p>
+                    </div>
+                </div>
+
+                <!-- Order Items -->
+                <h3 style="font-size: 1rem; margin-bottom: 16px;"><i class="fas fa-box-open"></i> Ordered Items</h3>
+                <div style="border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; overflow-x: auto;">
+                    <table class="data-table" style="margin: 0;">
+                        <thead style="background: var(--background);">
+                            <tr>
+                                <th>Product Name</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal-items-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Totals -->
+                <div style="display: flex; justify-content: flex-end; margin-top: 24px;">
+                    <div style="width: 300px; max-width: 100%; background: var(--background); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="color: var(--text-muted);">Subtotal:</span>
+                            <strong id="modal-subtotal">₹0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="color: var(--text-muted);">Shipping:</span>
+                            <strong id="modal-shipping-charge">₹0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px;">
+                            <span style="font-weight: 600;">Total Amount:</span>
+                            <strong id="modal-total-amount" style="color: var(--primary); font-size: 1.2rem;">₹0</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Modal (Add/Edit) -->
+    <div id="product-modal" class="modal hidden">
+        <div class="modal-content login-box modal-lg ayush-modal-content" style="max-width: 750px; background: linear-gradient(135deg, var(--surface) 0%, #faf8f5 100%);">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+                <h2 style="margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 10px;" id="product-modal-title">
+                    <i class="fas fa-leaf text-primary"></i> <span>Add New Product</span>
+                </h2>
+                <button id="close-product-modal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="product-form" enctype="multipart/form-data">
+                    <div class="product-modal-grid">
+                        <!-- Left column: product text attributes -->
+                        <div style="display: flex; flex-direction: column; gap: 16px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Formulation Name <span class="text-danger">*</span></label>
+                                <input type="text" id="prod-name" required minlength="3" placeholder="e.g. Ayushira Hair Vitalizer">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Description & Therapeutic Values <span class="text-danger">*</span></label>
+                                <textarea id="prod-desc" required minlength="10" rows="4" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:var(--radius-md); font-size:0.9rem;" placeholder="Outline the herbal ingredients and clinical benefits..."></textarea>
+                            </div>
+                            <div class="form-row-2col">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label>Price (₹) <span class="text-danger">*</span></label>
+                                    <input type="number" id="prod-price" required min="0" placeholder="Price in ₹">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label>Stock Capacity <span class="text-danger">*</span></label>
+                                    <input type="number" id="prod-stock" required min="0" value="0">
+                                </div>
+                            </div>
+                            <div class="form-row-2col">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label>Category <span class="text-danger">*</span></label>
+                                    <select id="prod-category" required class="premium-select" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:var(--radius-md); background: var(--surface); color: var(--text-main); font-size: 0.9rem; outline: none; cursor: pointer;"></select>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label>SKU / Batch Number</label>
+                                    <input type="text" id="prod-sku" placeholder="e.g. AYUSH-9801">
+                                </div>
+                            </div>
+                            <div class="form-row-2col">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label>Rating (0–5)</label>
+                                    <input type="number" id="prod-rating" min="0" max="5" step="0.1" value="0" placeholder="e.g. 4.5">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label>Review Count</label>
+                                    <input type="number" id="prod-review-count" min="0" value="0">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                                    <input type="checkbox" id="prod-featured" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;">
+                                    <span>Show on Homepage (Featured)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Right column: Formulation Images Upload & Previews -->
+                        <div style="display: flex; flex-direction: column; gap: 16px;">
+                            <div class="form-group" style="margin-bottom: 0; flex: 1; display: flex; flex-direction: column;">
+                                <label>Formulation Gallery (Select up to 10)</label>
+                                <div class="custom-file-upload" style="border: 2px dashed rgba(30, 77, 43, 0.2); border-radius: var(--radius-lg); padding: 24px; text-align: center; background: rgba(30, 77, 43, 0.02); cursor: pointer; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; transition: var(--transition-fast);">
+                                    <i class="fas fa-cloud-upload-alt text-primary" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                                    <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Click to upload herbal formulation images</span>
+                                    <input type="file" id="prod-images" name="images" multiple accept="image/*" style="opacity: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer;">
+                                </div>
+                                <div id="image-preview-container" class="image-preview-grid">
+                                    <!-- Dynamic previews go here -->
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn primary-btn" style="margin-top: 8px; width: 100%; height: 46px; font-weight: 600; font-size: 0.95rem; letter-spacing: 0.02em;">Save Formulation</button>
+                            <div id="product-form-error" class="error-msg" style="margin-top: 8px;"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bespoke Leaf-Themed User Profile Modal -->
+    <div id="user-modal" class="modal hidden">
+        <div class="modal-content login-box modal-lg" style="max-width: 850px; background: linear-gradient(135deg, var(--surface) 0%, #faf8f5 100%);">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+                <h2 style="margin: 0; font-size: 1.5rem;"><i class="fas fa-id-card text-primary" style="margin-right: 8px;"></i>User Profile Details</h2>
+                <button id="close-user-modal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+            </div>
+            
+            <div class="modal-body user-modal-body">
+                <!-- Left Panel: User Summary -->
+                <div class="user-profile-left-panel" style="border-right: 1px solid var(--border); padding-right: 32px; display: flex; flex-direction: column; align-items: center;">
+                    <!-- Leaf Border Avatar -->
+                    <div class="leaf-avatar-container">
+                        <div class="leaf-avatar-ring"></div>
+                        <div id="user-modal-avatar-initials" class="leaf-avatar-initials">TA</div>
+                        <img id="user-modal-avatar-img" src="" style="display: none; width: 100px; height: 100px; border-radius: 50%; object-fit: cover;">
+                    </div>
+                    
+                    <h3 id="user-modal-fullname" style="margin-top: 16px; margin-bottom: 4px; font-size: 1.25rem; font-weight: 700; text-align: center;"></h3>
+                    <p id="user-modal-email" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 24px; word-break: break-all; text-align: center;"></p>
+                    
+                    <!-- Quick Attributes & Form Controls -->
+                    <div style="width: 100%; display: flex; flex-direction: column; gap: 16px;">
+                        <div class="form-group" style="margin: 0;">
+                            <label style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 4px;">User Role</label>
+                            <select id="user-modal-role" class="premium-select" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); color: var(--text-main); font-size: 0.9rem; outline: none; cursor: pointer;">
+                                <option value="user">User</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <label style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Account Status</label>
+                            <label class="toggle-switch" style="align-self: flex-start;">
+                                <input type="checkbox" id="user-modal-status-toggle">
+                                <span class="toggle-track"></span>
+                                <span class="toggle-label" id="user-modal-status-label">Active</span>
+                            </label>
+                        </div>
+                        
+                        <div style="border-top: 1px solid var(--border); padding-top: 16px; margin-top: 8px; font-size: 0.8rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 8px;">
+                            <div><i class="far fa-calendar-alt" style="margin-right: 6px; width: 14px;"></i> Joined: <span id="user-modal-joined"></span></div>
+                            <div><i class="far fa-clock" style="margin-right: 6px; width: 14px;"></i> Last Login: <span id="user-modal-lastlogin">Never</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Panel: Tabs and Scrollable Lists -->
+                <div style="display: flex; flex-direction: column; gap: 24px; overflow-y: auto; max-height: 480px; padding-right: 8px;">
+                    <!-- Verification Badges -->
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <span id="user-modal-badge-email" class="badge">
+                            <i class="fas" style="margin-right: 6px;"></i> Email Verified
+                        </span>
+                        <span id="user-modal-badge-phone" class="badge">
+                            <i class="fas" style="margin-right: 6px;"></i> Phone Verified
+                        </span>
+                        <span id="user-modal-badge-wishlist" class="badge warning" style="background: var(--gold-light); color: var(--gold); border: 1px solid rgba(212,175,55,0.2);">
+                            <i class="fas fa-heart" style="margin-right: 6px;"></i> <span id="user-modal-wishlist-count">0</span> In Wishlist
+                        </span>
+                    </div>
+                    
+                    <!-- Grid columns: Addresses and Timeline -->
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 24px;">
+                        <!-- Address Book Section -->
+                        <div>
+                            <h4 style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-map-marker-alt text-primary"></i> Address Book
+                            </h4>
+                            <div id="user-modal-addresses-list" class="addresses-grid">
+                                <!-- Dynamically populated by JS -->
+                            </div>
+                        </div>
+                        
+                        <!-- Registered History Timeline Section -->
+                        <div style="border-top: 1px solid var(--border); padding-top: 24px;">
+                            <h4 style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-history text-primary"></i> Registered History Timeline
+                            </h4>
+                            <div class="user-journey-timeline" id="user-modal-timeline">
+                                <!-- Dynamically populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-layout" id="admin-app" style="display: none;">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Triven<span class="text-primary">Admin</span></h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-target="dashboard-section">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <a href="#" class="nav-item" data-target="users-section">
+                    <i class="fas fa-users"></i> Users
+                </a>
+                <a href="#" class="nav-item" data-target="products-section">
+                    <i class="fas fa-box"></i> Products
+                </a>
+                <a href="#" class="nav-item" data-target="orders-section">
+                    <i class="fas fa-shopping-cart"></i> Orders
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="nav-item text-danger">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <button id="mobile-toggle" class="mobile-toggle" aria-label="Toggle Menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="header-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search...">
+                </div>
+                <div class="user-profile">
+                    <img src="https://ui-avatars.com/api/?name=Admin&background=random" alt="Admin" class="avatar">
+                    <span id="admin-name">Admin</span>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                <!-- Dashboard Section -->
+                <section id="dashboard-section" class="content-section active">
+                    <h1 class="page-title">Dashboard Overview</h1>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon bg-primary-light">
+                                <i class="fas fa-users text-primary"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Total Users</h3>
+                                <p id="stat-users">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-success-light">
+                                <i class="fas fa-box text-success"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Total Products</h3>
+                                <p id="stat-products">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-warning-light">
+                                <i class="fas fa-shopping-cart text-warning"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Total Orders</h3>
+                                <p id="stat-orders">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-danger-light">
+                                <i class="fas fa-dollar-sign text-danger"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Total Revenue</h3>
+                                <p id="stat-revenue">₹0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Grid -->
+                    <div class="dashboard-charts-grid">
+                        <div class="card chart-card">
+                            <h3 class="chart-title">
+                                <span><i class="fas fa-chart-line text-primary"></i> Sales & Revenue Trend (Last 30 Days)</span>
+                                <span class="chart-subtitle">Daily aggregate</span>
+                            </h3>
+                            <div class="chart-container">
+                                <canvas id="salesTrendChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card chart-card">
+                            <h3 class="chart-title">
+                                <span><i class="fas fa-chart-pie text-warning"></i> Order Status Breakdown</span>
+                            </h3>
+                            <div class="chart-container" style="display: flex; align-items: center; justify-content: center;">
+                                <canvas id="orderStatusChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Orders & Top Selling Products -->
+                    <div class="dashboard-bottom-grid">
+                        <div class="card panel-card">
+                            <div class="panel-header">
+                                <h3 class="panel-title"><i class="fas fa-history text-primary"></i> Recent Orders</h3>
+                                <a href="#" class="btn-link nav-shortcut-btn" data-target="orders-section">View All Orders <i class="fas fa-arrow-right"></i></a>
+                            </div>
+                            <div style="overflow-x: auto;">
+                                <table class="data-table dashboard-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Order #</th>
+                                            <th>Customer</th>
+                                            <th>Total</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recent-orders-tbody">
+                                        <tr>
+                                            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                                                <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i> Loading recent orders...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card panel-card">
+                            <h3 class="panel-title" style="margin-bottom: 20px;"><i class="fas fa-trophy text-gold"></i> Top Rated Products</h3>
+                            <div id="top-selling-products-list" class="top-products-list">
+                                <div style="text-align: center; color: var(--text-muted); padding: 24px;">
+                                    <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i> Loading products...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Users Section -->
+                <section id="users-section" class="content-section hidden">
+                    <div class="section-header">
+                        <h1 class="page-title">Manage Users</h1>
+                        <div class="filter-controls" style="display: flex; gap: 16px; align-items: center;">
+                            <div class="header-search" style="border: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; padding: 6px 12px; border-radius: var(--radius-md); width: 220px;">
+                                <i class="fas fa-search" style="color: var(--text-muted); margin-right: 8px;"></i>
+                                <input type="text" id="user-search" placeholder="Search name or email..." style="border: none; background: transparent; outline: none; width: 100%; font-size: 0.85rem; color: var(--text-main);">
+                            </div>
+                            <select id="user-role-filter" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); color: var(--text-main); font-size: 0.85rem; outline: none; cursor: pointer;">
+                                <option value="">All Roles</option>
+                                <option value="user">User</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Bespoke User Metrics -->
+                    <div class="user-stats-grid">
+                        <div class="user-stat-card">
+                            <div class="user-stat-icon-wrapper bg-primary-light">
+                                <i class="fas fa-users text-primary"></i>
+                            </div>
+                            <div class="user-stat-info">
+                                <h4>Total Accounts</h4>
+                                <p id="user-stat-total">0</p>
+                            </div>
+                        </div>
+                        <div class="user-stat-card">
+                            <div class="user-stat-icon-wrapper bg-success-light">
+                                <i class="fas fa-user-check text-success"></i>
+                            </div>
+                            <div class="user-stat-info">
+                                <h4>Active Customers</h4>
+                                <p id="user-stat-active">0</p>
+                            </div>
+                        </div>
+                        <div class="user-stat-card">
+                            <div class="user-stat-icon-wrapper bg-warning-light">
+                                <i class="fas fa-user-shield text-warning"></i>
+                            </div>
+                            <div class="user-stat-info">
+                                <h4>Administrators</h4>
+                                <p id="user-stat-admins">0</p>
+                            </div>
+                        </div>
+                        <div class="user-stat-card">
+                            <div class="user-stat-icon-wrapper bg-danger-light">
+                                <i class="fas fa-user-slash text-danger"></i>
+                            </div>
+                            <div class="user-stat-info">
+                                <h4>Inactive Accounts</h4>
+                                <p id="user-stat-inactive">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status (Toggle Active)</th>
+                                    <th>Joined Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- User Pagination Controls -->
+                    <div class="pagination-container" style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; background: var(--surface); padding: 12px 24px; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
+                        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;" id="user-pagination-info">Showing 0 users</span>
+                        <div class="pagination-buttons" style="display: flex; gap: 12px;">
+                            <button id="user-prev-btn" class="btn" style="padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 500;"><i class="fas fa-chevron-left"></i> Prev</button>
+                            <button id="user-next-btn" class="btn" style="padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 500;">Next <i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Products Section -->
+                <section id="products-section" class="content-section hidden">
+                    <div class="section-header">
+                        <h1 class="page-title">Manage Products</h1>
+                    </div>
+
+                    <!-- Dynamic Product Metrics Row -->
+                    <div class="product-stats-grid">
+                        <div class="product-stat-card">
+                            <div class="product-stat-icon-wrapper bg-primary-light">
+                                <i class="fas fa-boxes text-primary"></i>
+                            </div>
+                            <div class="product-stat-info">
+                                <h4>Total Formulations</h4>
+                                <p id="prod-stat-total">0</p>
+                            </div>
+                        </div>
+                        <div class="product-stat-card">
+                            <div class="product-stat-icon-wrapper bg-warning-light">
+                                <i class="fas fa-exclamation-triangle text-warning"></i>
+                            </div>
+                            <div class="product-stat-info">
+                                <h4>Low Stock Alert</h4>
+                                <p id="prod-stat-low">0</p>
+                            </div>
+                        </div>
+                        <div class="product-stat-card">
+                            <div class="product-stat-icon-wrapper bg-danger-light">
+                                <i class="fas fa-fire text-danger"></i>
+                            </div>
+                            <div class="product-stat-info">
+                                <h4>Depleted Stock</h4>
+                                <p id="prod-stat-depleted">0</p>
+                            </div>
+                        </div>
+                        <div class="product-stat-card">
+                            <div class="product-stat-icon-wrapper bg-gold-light">
+                                <i class="fas fa-star text-gold"></i>
+                            </div>
+                            <div class="product-stat-info">
+                                <h4>Average Rating</h4>
+                                <p id="prod-stat-rating">0.0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Controls & Categories Deck -->
+                    <div class="products-controls-deck">
+                        <!-- Category Filters Slider -->
+                        <div class="category-filter-container">
+                            <button class="category-nav-btn prev" id="cat-nav-prev"><i class="fas fa-chevron-left"></i></button>
+                            <div class="category-filter-bar" id="category-filter-bar">
+                                <!-- Dynamic Category Pills will be rendered here -->
+                            </div>
+                            <button class="category-nav-btn next" id="cat-nav-next"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+
+                        <!-- Interactive Toolbar -->
+                        <div class="products-toolbar">
+                            <div class="header-search products-search-bar">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="product-search" placeholder="Search formulations, SKU, description...">
+                            </div>
+                            
+                            <div class="products-toolbar-actions">
+                                <div class="view-switcher">
+                                    <button class="view-toggle-btn active" data-view="grid" title="Showroom Card Grid">
+                                        <i class="fas fa-th-large"></i>
+                                    </button>
+                                    <button class="view-toggle-btn" data-view="list" title="Classic List Table">
+                                        <i class="fas fa-list"></i>
+                                    </button>
+                                </div>
+                                <button id="add-product-btn-toolbar" class="btn primary-btn"><i class="fas fa-plus"></i> Add Product</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Showcase Container -->
+                    <div id="products-container" class="view-grid">
+                        <!-- Showroom Card Grid -->
+                        <div id="products-grid-view" class="showroom-grid">
+                            <!-- Dynamic Glassmorphic Product Cards -->
+                        </div>
+
+                        <!-- Classic List View (Table) -->
+                        <div id="products-list-view" class="card list-view-container hidden">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Image</th>
+                                        <th>Name</th>
+                                        <th>Price</th>
+                                        <th>Stock</th>
+                                        <th>Rating</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="products-table-body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Orders Section -->
+                <section id="orders-section" class="content-section hidden">
+                    <div class="section-header">
+                        <h1 class="page-title">Manage Orders</h1>
+                    </div>
+                    <div class="card">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Order #</th>
+                                    <th>Customer</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-table-body">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
