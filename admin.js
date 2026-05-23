@@ -1,5 +1,5 @@
-//const API_BASE_URL = 'https://ecommerce-backend-xi-ten.vercel.app/api/v1';
-const API_BASE_URL = 'http://localhost:5000/api/v1';
+const API_BASE_URL = 'https://ecommerce-backend-xi-ten.vercel.app/api/v1';
+// const API_BASE_URL = 'http://localhost:5000/api/v1';
 
 // Image URL formatter helper for local uploads static serving
 function formatImageUrl(url) {
