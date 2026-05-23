@@ -1,4 +1,5 @@
-const API_BASE_URL = 'https://ecommerce-backend-xi-ten.vercel.app/api/v1';
+//const API_BASE_URL = 'https://ecommerce-backend-xi-ten.vercel.app/api/v1';
+const API_BASE_URL = 'http://localhost:5000/api/v1';
 
 // Image URL formatter helper for local uploads static serving
 function formatImageUrl(url) {
@@ -1174,6 +1175,10 @@ async function loadOrders() {
     if (data && data.data && Array.isArray(data.data)) {
         data.data.forEach(order => {
             const statusClass = order.status === 'delivered' ? 'delivered' : order.status === 'cancelled' ? 'cancelled' : 'pending';
+            const payMethod = order.paymentMethod || 'cod';
+            const payLabel = payMethod === 'cod'
+                ? '<span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:3px 8px;border-radius:999px;font-size:0.75rem;font-weight:600;"><i class="fas fa-truck"></i> COD</span>'
+                : '<span style="display:inline-flex;align-items:center;gap:5px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:3px 8px;border-radius:999px;font-size:0.75rem;font-weight:600;"><i class="fas fa-bolt"></i> Online</span>';
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><strong style="color: var(--primary)">#${order.orderNumber || order._id.substring(18)}</strong></td>
@@ -1182,6 +1187,7 @@ async function loadOrders() {
                     <div style="font-size: 0.8rem; color: var(--text-muted)">${order.shippingAddress?.city || 'N/A'}, ${order.shippingAddress?.state || ''}</div>
                 </td>
                 <td>₹${order.totalAmount}</td>
+                <td>${payLabel}</td>
                 <td><span class="badge ${statusClass}">${order.status}</span></td>
                 <td>${new Date(order.createdAt).toLocaleDateString()}</td>
                 <td>
@@ -1227,6 +1233,13 @@ function showOrderDetails(order) {
     document.getElementById('modal-customer-name').innerText = order.user ? `${order.user.firstName || ''} ${order.user.lastName || ''}`.trim() : 'Guest';
     document.getElementById('modal-customer-email').innerText = order.user?.email || 'N/A';
     document.getElementById('modal-customer-phone').innerText = order.user?.phone || 'N/A';
+    const payMethod = order.paymentMethod || 'cod';
+    const payEl = document.getElementById('modal-payment-method');
+    if (payEl) {
+        payEl.innerHTML = payMethod === 'cod'
+            ? '<span style="color:#166534;"><i class="fas fa-truck"></i> Cash on Delivery</span>'
+            : '<span style="color:#1d4ed8;"><i class="fas fa-bolt"></i> Online (Razorpay)</span>';
+    }
 
     // Shipping
     const shipName = order.shippingAddress?.fullName || order.user?.firstName || '';
